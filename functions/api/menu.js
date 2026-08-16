@@ -81,7 +81,7 @@ export async function onRequestPost(context) {
   try {
     const result = await context.env.AI.run(MODEL, {
       messages,
-      max_tokens: 1600,
+      max_tokens: 1000,
       temperature: 0.35,
       response_format: {
         type: 'json_schema',
