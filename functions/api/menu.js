@@ -1,4 +1,4 @@
-const MODEL = '@cf/meta/llama-3.1-8b-instruct-fast';
+const MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 
 const menuSchema = {
   type: 'object',
@@ -83,11 +83,8 @@ export async function onRequestPost(context) {
     const result = await context.env.AI.run(MODEL, {
       messages,
       max_tokens: 1000,
-      temperature: 0.35,
-      response_format: {
-        type: 'json_schema',
-        json_schema: menuSchema
-      }
+      temperature: 0.2,
+      guided_json: menuSchema
     });
     const parsed = typeof result.response === 'string' ? JSON.parse(result.response) : result.response;
     if (!parsed || !Array.isArray(parsed.menus)) throw new Error('Invalid AI response');
