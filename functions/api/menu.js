@@ -11,7 +11,7 @@ const menuSchema = {
         type: 'object',
         properties: {
           emoji: { type: 'string' },
-          course: { type: 'string', enum: ['主食', '主菜', '汁物'] },
+          course: { type: 'string' },
           title: { type: 'string' },
           summary: { type: 'string' },
           ingredients: { type: 'array', minItems: 1, items: { type: 'string' } },
@@ -91,18 +91,24 @@ export async function onRequestPost(context) {
     });
     const parsed = typeof result.response === 'string' ? JSON.parse(result.response) : result.response;
     if (!parsed || !Array.isArray(parsed.menus)) throw new Error('Invalid AI response');
-    const menus = parsed.menus.slice(0, 3).map((menu) => {
+    const expectedCourses = ['主食', '主菜', '汁物'];
+    const seenTitles = new Set();
+    const menus = parsed.menus.slice(0, 3).map((menu, index) => {
       const values = ['carbohydrate', 'protein', 'fat'].map((key) => Math.max(0, Number(menu.nutrition?.[key]) || 0));
       const total = values.reduce((sum, value) => sum + value, 0) || 1;
       const normalized = values.map((value) => Math.round(value / total * 100));
       normalized[0] += 100 - normalized.reduce((sum, value) => sum + value, 0);
+      let title = String(menu.title || expectedCourses[index]);
+      if (seenTitles.has(title)) title += `（${expectedCourses[index]}）`;
+      seenTitles.add(title);
       return {
         ...menu,
+        title,
+        course: expectedCourses[index],
         nutrition: { carbohydrate: normalized[0], protein: normalized[1], fat: normalized[2] }
       };
     });
-    const expectedCourses = ['主食', '主菜', '汁物'];
-    if (menus.length !== 3 || new Set(menus.map((menu) => menu.title)).size !== 3 || menus.some((menu, index) => menu.course !== expectedCourses[index])) throw new Error('Duplicate AI response');
+    if (menus.length !== 3) throw new Error('Incomplete AI response');
     return json({ menus, model: MODEL });
   } catch (error) {
     console.error('Workers AI menu generation failed', error);
